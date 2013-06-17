@@ -1,0 +1,1688 @@
+*ide.txt*  Plugin for an extensible integrated development environment.
+
+OVERVIEW                                                                 *ide*
+
+The IDE plug-in provides a framework around which common development features
+can be integrated into VIM. The plugin offers a number of features for opening
+common "views" similar to other IDE environments. Although fully customizable,
+many features have default implementations based on other commonly used VIM
+plugins. To make use of all the default features the following plugins must be
+installed:
+
+    projux [Bash scripts]
+    syntastic
+    taglist.vim/taglisttoo
+    vim-fugative
+    vim-pyref [Python only]
+    vim-scaladoc [Scala only]
+    vim-session
+    tcomment_vim
+    nerdtree
+    conque-term
+    FuzzyFinder
+    mru.vim
+
+Support is also provided for the eclim plugin when enabled.  Additional
+features are also provived via applescript when running in MacVim.
+
+The plugin can be enabled/disabled using the following flag:
+
+    *g:ide* (1 = enable, 0 = disable)
+
+
+QUICK-GUIDE                                                   *ide-quickguide*
+
+For the impatient, these are the most used features:
+
+Buffers:
+    `tj`                          Toggle buffer list display
+    `:open` :test                 Open test file (from source)
+    `:open` :src                  Open source file (from test)
+    `:open` :h                    Open c header file
+
+Diffing:
+    `:diff` :saved                Diff current buffer with last save
+    `:diff` :head                 Diff current file with GIT head
+    `:diff` :staged               Diff current file with GIT staged data
+
+Docs:
+    `:doc` <tag>                  Launch browser to source code reference
+
+Formatting:
+    `<leader>f`                   Format (current buffer)
+    `gq`                          Format selected text
+
+Building:
+    `<leader>b`                   Build
+
+Linting:
+    `<leader>l`                   Lint
+
+Errors:
+    `<leader>e`                   Errors (syntastic) for previous lint/build
+    `tl`                          Toggle location (errors, grep) list display
+
+    NOTE: If running vim from projux's pvim, build/lint errors are auto-loaded
+
+Testing:
+    `<leader>t`                   Run test for current file
+
+Running:
+    `<leader>r`                   Run program
+
+Find/Grep:
+    `:Find` <glob>                Find files in current project
+    `:Grep` <pat>                 Find files with pattern in current project
+
+Sessions:
+    `:save` :session              Save current VIM session under project name
+
+Tmux:
+    `gt`                          Send selected text to companion TMUX session
+
+
+USE-CASES                                                       *ide-usecases*
+
+There are three main ways in which to use IDE:
+
+    1. Single GVIM session (or single VIM session in a local terminal)
+    2. Single VIM session in a remote terminal
+    3. Multiple VIM sessions in remote terminals using TMUX
+
+In the first case, just launch GVIM (or local terminal VIM) as you normally
+would. Operations that require opening side views will automatically extend
+the with of the GVIM or local terminal window to accomodate the new view.
+
+In the second case, VIM is launched over a remote SSH connection. In this
+scenario commands are run on the remote machine so there is no ability to
+adjust the width of the local window automatically. The terminal window must
+be pre-setup to the max width required for any display of views. Opening and
+closing views can still be done, but when no views are open the main window
+will occupy the entire screen.
+
+In the last case, VIM is also launched over a remote SSH connection, but
+TMUX is running remotely (NOT locally) on the server side. Here multiple
+SSH connections are used such that there are different TMUX windows open in
+different terminals. If running on OSX, iTerm can be used to create a layout
+with multiple terminals in a single OSX window. In this setup, only top and
+bottom views are used, side views are not. To create a side by side display
+of two files, the `:eopen` command can be used. When run from a terminal
+window, the `:eopen` command will use TMUX to start a separate VIM session
+running in another terminal window to display a file. This setup requires
+proper configuration of tmux settings (see `:tmux`)
+
+
+VIEWS                                                              *ide-views*
+
+A "view" corresponds to a window whose sole purpose is to provide helper
+functionality that goes along side another main window. Depending on
+implementation, the "window" may an internal VIM window or an external
+application. The following views are supported:
+
+    *buffers*
+
+      The buffers view represents a window used to display a list of open
+      buffers.
+
+    *projects*
+
+      The projects view represents a window used to display a list of
+      supported projects. Default implementations are provided for both
+      projux and eclim.
+
+    *explorer*
+
+      The explorer view represents a window used to explore the files in a
+      directory or to explore the files in a project hierarchy. The default
+      implementation is provided by nerdtree (file exploring) and eclim
+      (project exploring) plugins.
+
+    *outline*
+
+      The outline view represents a window used to display the outline of
+      a source file (e.g. tags). The default implementation is provided by
+      the taglist plugin.
+
+    *location* *[quickfix]*
+
+      The location view represents a window used to display the location list
+      for the current file's errors or the last grep/lint/build/test/...
+      A special window is provided instead of the built-in VIM location list
+      in order to provide better formatting of the output. A quickfix view
+      is also supported, but by default the syntastic, projux, and eclim
+      plugins write to the location list and not the quickfix list.
+
+    *terminal*
+
+      The terminal view represents a window used for terminal related
+      operations (e.g. bash, etc). On MacVim, the default implementation is
+      provided by the external Terminal app. In linux based environments, the
+      default implementation is provided by the conque-term plugin. This view
+      is only applicable when running locally.
+
+    *browser*
+
+      The browser view represents a window used for web browsing. The default
+      implementation is provided by Chrome in MacVim and by the default
+      browser on linux. This view is only applicable when running locally.
+
+    *help*
+
+      The help view is provided by the VIM help implementation.
+
+    *git*
+
+      The git view is used for displaying the output of git commands such
+      a 'git log' or 'git status'. The view supports selecting revisions
+      for opening, diffing, etc. The default implementation is a wrapper
+      around vim-fugative.
+
+    *diff*
+
+      The diff view is used for diffing a current file with another file,
+      another revision of a file, or unsaved changes to the curent file.
+
+    *split*
+
+      The split view is a special view used to display another file along side
+      of an existing file. The view is used by features that open companion
+      files associated with a current file (e.g. .c vs .h or test vs src).
+
+    *mirror*
+
+      The mirror view is used to show the same buffer in two different
+      windows. Useful for viewing two different sections of the same file.
+
+
+LAYOUT                                                            *ide-layout*
+
+Each view supports the ability to control its layout and to toggle its
+display. The display toggles are covered under MAPPINGS. The following
+variables are used to control the layout:
+
+    *g:ide_<view>_view_pos* ('right' | 'left' | 'top' | 'bottom')
+      Position of view.
+      Example: g:ide_outline_view_pos = "right"
+
+    *g:ide_<view>_view_size* (<int>)
+      Width of view (if left/right) or height (if top/bottom)
+      Example: g:ide_explorer_view_size = 50
+
+Position and size can also be set for general purpose views called *list*
+views. Unlike the main views, these views do not support the ability to be
+toggled opened and closed directly. Instead, a `list` view is opened whenever
+a list of items (files, buffers, etc) are displayed to choose from (e.g. the
+result of `:find` or `:grep` commands)
+
+When running on MacVim, control over external windows is also provided using
+applescript. By default, when the view size is set to 0 for external
+windows the remaining screen width or height will be used. Additional control
+over the external terminal and browser widths and heights is provided using:
+
+    *g:ide_mac_<view>_min_bounds* ([width, height])
+      Min bounds for external window.
+      Example: g:ide_mac_terminal_min_bounds = [570, 366]
+
+    *g:ide_mac_<view>_max_bounds* ([width,height])
+      Max bounds for external window.
+      Example: g:ide_mac_browser_max_bounds = [1100, 800]
+
+If no layout information is provided, the following defaults are used:
+
+    VIEW             GVIM           VIM (Terminal)
+
+    `buffers`          bottom         bottom
+    `projects`         bottom         bottom
+    `explorer`         right          bottom
+    `outline`          right          bottom
+    `location`         bottom         bottom         (also quickfix)
+    `terminal`         right          bottom
+    `browser`          right          right
+    `help`             right          bottom
+    `git`              right          bottom
+    `diff`             right          bottom
+    `split`            right          bottom
+    `mirror`           right          bottom
+
+The default width is `g:ide_win_width` except for outline (50) and terminal
+(80). The default height is `g:ide_list_win_height`
+
+
+FILETYPE SETTINGS                                      *ide-filetype_settings*
+
+The IDE plugin provides support for specifying settings to apply on a per
+filetype basis. Settings include color scheme, local buffer settings
+(textwidth, etc), print margin settings, and the implementation to use
+for project commands. These settings are specified using the following
+variables:
+
+    *g:ide_colorschemes*          List of color scheme specifications:
+      `[cs_name,`                 Name of color scheme
+       `background,`              Background setting ("light", "dark")
+       `bg_override]`             Opt background color override ("#000000")
+
+    *g:ide_filetype_settings*     Dict of filetype settings:
+      `filetype:{`
+        `'colorscheme':(int),`    Offset into `g:ide_colorschemes`
+                                (-1 for as is)
+        `'local_settings':(str),` Space separated setlocal settings
+                                (e.g. "shiftwidth=2 textwidth=80")
+        `'margin_flags':(int),`   Print margin flags: -1 (as is),
+                                0 (no margin), 1 (margin),
+                                2 (margin + over length error highlighting)
+        `'project':(str)`         'projux' or 'eclim'
+        `'search':(str)`          'projux'
+        `'format':(str)`          'projux' or 'eclim'
+        `'lint':(str)`            'projux', 'eclim', or 'pymode'
+        `'build':(str)`           'projux' or 'eclim'
+        `'test':(str)`            'projux' or 'eclim'
+        `'coverage':(str)`        'projux' or 'eclim'
+        `'run':(str)`             'projux'
+        `'sanity':(str)`          'projux'
+      `}`
+
+The colorschemes specify the names of all the supported color schemes with
+overrides for background setting and color. The colorschemes are applied on
+a per file type basis and are set when the first file is opened in vim. After
+the first load, the colorschemes can be cycled through with a key mapping.
+
+The local settings are applied whenever a file is opened. These settings
+should include settings related to indentation, formatting, etc. If
+settings do not exist for a given filetype, then settings labeled 'default'
+are used. Some common settings that one would apply include:
+
+    `number`                      Enable line number column display
+    `shiftwidth=2`                Use 2 space autoindent (cindent, <<, >>)
+    `textwidth=80`                Max line length when wrapping
+    `expandtab`                   Replace tabs with spaces
+    `tabstop=2`                   If a tab does exist, show it as 2 spaces
+    `softtabstop=2`               Number of spaces tab feels like when editing
+    `linebreak`                   If wrap then visual break at words (breakat)
+    `wrapmargin=0`                Don't leave any chars before right margin
+
+Each file has it own way of formatting. Likely you will also want to add the
+following setting so that the 'gq' command works properly:
+
+    `formatexpr=g:IdeFormatSelected('expr')`
+
+VIM (or language plugings) typically have builtin support for proper
+indentation, but if not, the following can also be added to the file settings:
+
+    `indentexpr=my#indent()`       Set to custom vim indentation function
+
+The 'project', 'search', 'format', 'lint', 'build', 'test', 'coverage',
+'run', and 'sanity' settings determine which implementations to use for the
+corresponding commands `:project`, `:search`, `:format` `:lint`, `:build`,
+`:test`, `:coverage`, `:run`, and `:sanity`. Note, these settings only apply
+to the default implementations supported by IDE. A custom implementation
+provided in .vimrc, etc need not set these values. IDE itself ships with
+these values set to 'projux'.
+
+
+MAPPINGS                                                        *ide-mappings*
+
+The IDE plugin provides default key mappings that override some of the built
+in mappings provided by VIM. The goal of these mappings is to create a common
+set of names that are tied to keywords that make them easy to remember. Like
+COMMANDS, some users may frown up such customizations so the following flag
+can be used to disable the creation of these mappings by the IDE plugin:
+
+    *g:ide_enable_mappings* (1 = enable | 0 = disable)
+
+In addition to the default mappings, some of the author's customized mappings
+are available by setting the following flag:
+
+    *g:mike_mode* (1 = enable | 0 = disable)
+
+
+GENERAL KEY MAPPINGS                                    *ide-general-mappings*
+
+The file explorer view and temporary windows that list files or buffers for
+selection support the following key mappings:
+
+    `e`                           Edit selected file in the current window
+    `E`                           Edit selected file in the external window
+    `s`                           Edit selected file in the split view
+    `t`                           Edit selected file in a new tab window
+    `d`                           Diff selected file with current
+    `D`                           Diff file with current in external window
+    `x`                           Delete selected file/buffer
+    `q`                           Close view or temporary window
+
+Where forward/backward navigation makes sense, the <c-[> and <c-t> (or gj
+and gk) keys have also been mapped.
+
+
+NAVIGATION MAPPINGS                                  *ide-navigation-mappings*
+
+The navigation mappings are only available when `g:mike_mode` is enabled.
+When enabled, all navigation becomes centered around use of the 'h', 'j',
+'k', and 'l' keys. The 'j' means down or forward and 'k' means up or back.
+While 'h' and 'l' mean left and right respectively. The following mappings
+are supported:
+
+    `<c-j>`                       Page forward (e.g. <c-d>)
+    `<c-k>`                       Page backward (e.g. <c-u>)
+    `j`                           Popup menu up (e.g. <c-n>)
+    `k`                           Popup menu down (e.g. <c-p>)
+    `gj`                          Tag forward (e.g. <c-]>)
+    `gk`                          Tag backward (e.g. <c-t>)
+    `f{j,k}`                      Page start/end (e.g. GG, :0)
+    `f{l,h}`                      Line start/end (e.g. ^, $)
+    `gg`                          Previous buffer (e.g. :e#)
+    `ff`                          Previous position (e.g. '')
+    `fw{j,k,h,l}`                 Win up/down/left/right (e.g. <c-w>{j,k,h,l})
+    `<a-{j,k,h,l}>`               As above but with win maximizing
+    `z{j,k,h,l}`                  Zoom in/out/left/right
+    `<c-space>`                   Auto-completion (e.g. <c-x><c-u>)
+
+
+TABBING (CYCLING) MAPPINGS                              *ide-tabbing-mappings*
+
+The tabbing (cycling) mappings are only available when `g:mike_mode` is
+enabled. When enabled, the space bar is configured to be used as the default
+key for tabbing (cycling) through a series of options. The following mappings
+are supported:
+
+    `e<space>`                    Tab (cycle) through external windows
+    `w<space>`                    Tab (cycle) through current open windows
+    `t<space>`                    Tab (cycle) through current open tab panes
+    `c<space>`                    Tab (cycle) through color schemes
+
+In addition to the space bar mappings, the standard (c-a, not c-b) tmux
+mappings can be used to cycle windows in a connected tmux session.
+
+    `c-a` {n,p}                   Tab (cycle) through tmux windows
+
+
+TOGGLE (T) MAPPINGS                                           *ide-t-mappings*
+
+The 't' key is used to mean "toggle" and following mappings have been setup
+for toggling view display and other common toggles:
+
+    `tb`                          Toggle breakpoint
+    `tc`                          Toggle chrome (browser view)
+    `td`                          Toggle diff view
+    `te`                          Toggle file/project explorer view
+    `tf`                          Toggle folding
+    `tg`                          Toggle git view
+    `th`                          Toggle help view
+    `ti`                          Toggle insert (paste) mode
+    `tj`                          Toggle buffer mode ("jump" to buffer)
+    `tl`                          Toggle location view
+    `tm`                          Toggle mirror view
+    `tn`                          Toggle line number display
+    `to`                          Toggle outline view
+    `tp`                          Toggle project view
+    `tq`                          Toggle quickfix view
+    `ts`                          Toggle split view
+    `tt`                          Toggle terminal view
+    `tw`                          Toggle line wrapping
+    `t/`                          Toggle search highlighting
+
+
+CONTEXTUAL (G) MAPPINGS                                       *ide-g-mappings*
+
+The 'g' key in VIM is typically used for contextual related operations where
+the current selection or word under the cursor is used in the operation. The
+'g' can be though of as "go". The following mappings are supported:
+
+    `gb`                          Go to browser with current context
+    `gc`                          Toggle selected's comments (TComment plugin)
+    `gd`                          Go to var def for current context (VIM)
+    `gf`                          Go to file of current context (VIM)
+    `gh`                          Go to help with current context
+    `gq`                          Format selected (or =) (VIM)
+    `gr`                          Go to refs (docs) with current context
+    `gs`                          Go to search with current context
+    `gt`                          Send selected (or cur para) text to tmux term
+    `gv`                          Redo last visual selection (VIM)
+
+
+LEADER MAPPINGS                                          *ide-leader-mappings*
+
+The following leader key mappings are provided for convenience:
+
+    `<leader>b`                   Build (default targets)
+    `<leader>e`                   Load errors from last :lint, :build, etc
+    `<leader>f`                   Format (current buffer)
+    `<leader>i`                   Add import for current context
+    `<leader>l`                   Lint (current buffer)
+    `<leader>t`                   Test (current file)
+    `<leader>r`                   Run program
+    `<leader>s`                   Generate errors with syntastic
+
+
+COMMANDS                                                        *ide-commands*
+
+The IDE plugin provides commands in UpperCamelCase form but also provides
+lowercase abbreviations to ease typing. In some cases, VIM commands themselves
+have been overridden (using lowercase abbreviations) to provided enhanced
+features. Since some users may frown upon such customizations, the following
+flags can be used to disable the creation of commands by the IDE plugin:
+
+    *g:ide_enable_commands* (1 = enable | 0 = disable)
+    *g:ide_lowercase_commands* (1 = enable | 0 = disable)
+
+The `g:ide_lowercase_commands` option is only applicable if
+`g:ide_enable_commands` is set.
+
+
+COMMAND KEYWORDS                                        *ide-command-keywords*
+
+In addition to the VIM keywords, many of the IDE commands support additional
+keywords that can be used in place of common file names, directory names,
+views etc.  All IDE keywords start with ':'. The following keywords are
+supported:
+
+    `:buffer`                     Current buffer
+    `:file`                       Current file (VIM) (or `%`)
+                                NOTE: For current dir use `.` (or `%/`)
+    `:project/`                   Project dir assoc with current file
+    `:src`                        Source file assoc with current file
+    `:src/`                       Source dir assoc with current file
+    `:test`                       Test file assoc with current file
+    `:test/`                      Test dir assoc with current file
+    `:{ext}`                      Companion file (by extension) assoc with
+                                cur file (e.g. `:c`, `:h`, ```:scala`, etc)
+    `:{view}`                     View name (e.g. `:buffers`, `:outline`, etc)
+    `:{project_cmd}`              Project command (e.g. `:build`, `:lint`, etc)
+    `:git/`                       Git repo assoc with current file
+    `:saved`                      Last saved version of file.
+    `:staged`                     Cur file in GIT index (also :0)
+    `:head`                       GIT HEAD rev or file in HEAD rev
+    `:{git-rev}`                  Any git revision supported by git-rev-parse
+                                (e.g. :3a2de1c, :v1.1, :master, :0, :HEAD^)
+    `:review` [id]                URL for code review
+    `:bug` [id]                   URL for bug
+    `:report` [name]              URL for named report (build, test, coverage)
+
+The keywords may be abbreviated when there is no ambiguity. For example, when
+only a directory is required, :p, :s, :t can be used in place of :project/,
+:src/, and :test/.  When only a file is required, :b, :f, :s and :t can be
+used in place of :file, :src and :test. Similarly for views, etc.
+
+Although git-rev-parse only uses ':' for revisions that involve the GIT
+index, all GIT revision keywords are preceeded by the ':' IDE tag in order
+to distinguish them from files and other names. This behavior is different
+than vim-fugitive and should be noted. Also, unlike vim-fugitive, the meaning
+of head (or HEAD) depends on the context. On its own, HEAD refers to the
+information about the revision itself, but when used in the context of a diff
+it refers to the revision of the current file within the HEAD revision. Since
+the namespace for git rev keywords is shared with the other IDE keywords, the
+non-git IDE keywords (:file, :project, :src, :test, etc) will take
+precedence over git rev keywords in cases of ambiguity.
+
+
+GENERAL COMMANDS                                        *ide-general-commands*
+
+:Open [target] [options]                                          *:o* *:open*
+
+    This heavily overridden command performs everything there is to do with
+    opening either a view, file, dir, url, or external program. The following
+    targets are supported:
+
+    View Targets
+    `:buf[fers]`                  Opens buffers view
+    `:loc[ation]`                 Opens location view (also `qui[ckfix]`)
+    `:pro[jects]`                 Opens project view
+    `:exp[lorer]`[{dir}]          Opens file/project explorer view
+    `:out[line]`                  Opens outline view
+    `:ter[minal]`                 Opens terminal view
+    `:bro[wser]` {url}            Opens browser view
+    `:hel[p]` {subject}           Opens help view to given subject
+    `:git` {rev}                  Opens named git revision
+    `:dif[f]` {file}              Opens diff view to given files
+    `:spl[it]` {file}             Opens named file in split view         *:os*
+    `:mir[ror]`                   Opens mirror view
+
+    Session Targets
+    `:ses[sion]` `[name]`           Opens named session (or chooser)
+
+    Tab Targets
+    `:tab` {file}                 Opens named file in new tab            *:ot*
+
+    Targets that take files or directories also support the IDE command
+    keywords for specifying companion files or dirs to open:
+
+    `:t[est`]                     Open test file assoc with cur
+    `:test/`                      Open test dir assoc with cur
+    `:s[rc]`                      Open src file assoc with cur
+    `:src/`                       Open src dir assoc with cur
+    `:{ext}`                      Open 'c', 'h', etc assoc with cur file
+    `:project/`                   Open project dir assoc with cur
+
+    The 'browser' target supports the following keywords for specifying
+    special URLs to open:
+
+    `:rev[iew]` {id}              Open URL for code review
+    `:bug` {id}                   Open URL for bug
+    `:rep[ort]` {name}            Open URL for named report
+
+    The 'explorer' target will either open a project explorer (if eclim is
+    installed and enabled for the file type's project implementation) or a
+    file explorer.
+
+    When there is ambiguity, IDE makes assumptions that the target is either
+    'file', 'dir', 'browser', or 'git' depending on the context. For example:
+>
+     :open                      Assumes 'dir' & opens explorer to cur dir
+     :open foo                  If 'foo' dir then 'dir' else assumes 'file'
+     :open google.com           Assumes 'browser' & opens to google.com
+     :open :head                Assumes 'git' and opens head revision
+<
+    Examples:
+
+    Views >
+     :open :buffers             Opens buffers view
+     :open :projects            Opens projects view
+     :open :explorer            Opens file explorer to . (or eclim proj expl)
+     :open :explorer /foo       Opens file explorer to /foo dir
+     :open :outline             Opens outline view
+     :open :location            Opens location list view
+     :open :terminal            Opens terminal view
+     :open :browser google.com  Opens browser view to google.com
+     :open :help foo            Opens help view to subject foo
+     :open :git :head           Opens git view to the HEAD revision
+     :open :diff :saved         Opens diff view against last saved file
+     :open :split foo           Opens file foo in split view
+     :open :split :test         Open split view of test file assoc with cur
+     :open :split :h            Open h file assoc with cur c or test file
+     :open :mirror              Opens mirror view
+<
+    Sessions >
+     :open :session             Opens session chooser
+     :open :session foo         Opens session foo
+<
+    Tabs >
+     :open :tab /bar/foo        As above but opens in tab view
+<
+    Defaults/Keywords >
+     :open                      Open file explorer at current dir
+     :open foo                  Opens explorer if foo dir else opens as file
+     :open google.com           Opens browser to url google.com
+     :open :src                 Opens src file assoc with cur
+     :open :c                   Open c file assoc cur h or test file
+     :open /bar/foo             Open file explorer /bar/foo
+     :open :src/                Open file explorer to project src dir
+     :open :head                Opens git view to HEAD revision
+     :open :test                Opens test file (or dir) assoc with cur
+     :open :src                 Opens source file (or dir) assoc with cur
+     :open :h                   Opens h file assoc with cur
+     :open :review              Opens browser to default review id
+     :open :review 55555        Opens browser to review id 55555
+     :open :bug                 Opens browser to default bug id
+     :open :bug 55555           Opens browser to bug id 55555
+     :open :report build        Opens browser to report for last build
+     :open :report test         Opens browser to report for last test
+     :open :report coverage     Opens browser to report for last test coverage
+
+
+:EOpen [target] [options]                                             *:eopen*
+
+    Same as `:open` but opens in an external gvim window (if running GVIM) or
+    an external tmux VIM session (if running in terminal). Only the following
+    targets are supported.
+
+    View Targets
+      `:mirror`                   Opens readonly mirror view (GVIM or TMUX)
+
+    Files/Directory Targets
+      {file}                      Opens named file (GVIM or TMUX)
+      {dir}                       Opens named dir (GVIM or TMUX)
+
+    In order to run from an terminal where TMUX is used, TMUX must be
+    properly setup (see `:tmux`)
+
+
+:Close [target]                                                *:clo* *:close*
+
+    Overrides VIMs close implementation to allow closing views/sessions. If no
+    arguments are provided for the target then the default VIM implementation
+    is used. The following targets are supported:
+
+    `:buf[fers]`                   Closes buffers view
+    `:loc[ation]`                  Closes location view (also `qui[ckfix]`)
+    `:pro[jects]`                  Closes projects view
+    `:exp[lorer]`                  Closes file/project explorer view
+    `:out[line]`                   Closes outline view
+    `:ter[minal]`                  Closes terminal view
+    `:bro[wser]`                   Closes browser view
+    `:hel[p]`                      Closes help view
+    `:git`                         Closes git view
+    `:dif[f]`                      Closes diff view
+    `:spl[it]`                     Closes split view
+    `:mir[ror]`                    Closes mirror view
+    `:ses[sion]`                   Closes session
+
+    Examples: >
+     :close                     Default VIM close
+     :close explorer            Close file/project explorer view
+     :close outline             Close outline view
+
+
+:Find {glob} [dir] [flags]                                      *:fin* *:find*
+
+    Recursively searches for files within directories using a glob pattern
+    (using the unix find command).
+
+    The directory to start the search from follows the glob pattern. The
+    following IDE command keywords can be used in place of the directory:
+
+    `:t[est/]`                    Search project test dir
+    `:s[rc/]`                     Search project src dir
+    `:p[roject/]`                 Search project dir
+
+    By default, if no directory is specifed then files are searched for in
+    the current project's src and test directories.
+
+    In addition to specifying the glob pattern and directory, a set of
+    name/value flags can be used to limit the search. The following flags
+    are supported:
+
+    `type` {type}                 File types: [f, d, l, ...]
+    `grep` {pat}                  Files containing data matching grep pattern
+    `mtime` {time}                Last modification time: [+,-]n[s,m,h,d,w]
+    `ctime` {time}                Creation time: [+,-]n[s,m,h,d,w]
+    `atime` {time}                Last access time: [+,-]n[s,m,h,d,w]
+    `newer` {file}                Files newer than given file
+    `depth` {n}                   Files at depth n
+    `mindepth` {n}                Files at depth n and greater
+    `maxdepth` {n}                Files at depth n and less
+    `size` {n}                    Files of size: n[k,M,G,T,P]
+    `perm` {xxx}                  Files with permissions xxx
+    `user` {name}                 Files with given owner name
+    `group` {name}                Files with given group name
+
+    If one or more matches are found, then a list of matches is presented.
+    A file or dir can be opened by hitting enter or pressing e/E (edit),
+    s (split), t (tab), or d/D (diff) within the temporary window displaying
+    the matches. The q (quit) key can be used to close the window without
+    opening a file.
+
+    When no arguments are provided to find, the prev results are re-displayed.
+    To clear cached results, use 'refresh find'.
+
+    Examples: >
+     :find *.txt                Search for '*.txt' in src/test dirs (default)
+     :find *.txt :project/      Search for '*.txt' in project dirs
+     :find *.txt :src/          Search for '*.txt' in project src dirs
+     :find *.txt :test/         Search for '*.txt' in project test dirs
+     :find *.txt .              Search for '*.txt' starting from cur dir
+     :find .* .                 Search for hidden files in cur dir
+     :find *.txt /              Search for '*.txt' starting from root dir
+     :find *.txt /p maxdepth 3  Search for '*.txt' from /p to max depth 3
+     :find *.txt mtime -7d      Search for '*.txt' modified in last 7 days
+                                (s=secs, m=mins, h=hours, d=days, w=weeks)
+     :find *.txt newer foo.txt  Search for '*.txt' newer than foo.txt
+     :find *.txt grep 'hi ma'   Search for '*.txt' with 'hi there' in them
+     :find foo type f           Search only for files with names foo
+     :find foo type d           Search only for dirs with names foo
+     :find foo type l           Search only for links with names foo
+     :find foo                  Search cur proj for file/dir/link named foo
+     :find                      Re-display results of last find
+     :refresh find              Re-run last find again
+>
+
+:Grep {pat} [dir]                                                *:gr* *:grep*
+
+    Recursively searches for lines in files matching a given regex pattern
+    (using the unix grep command). The results are added to the location list
+    for the current window.
+
+    When no arguments are provided to grep, the prev results are re-displayed.
+    To clear cached results, use 'refresh grep'.
+
+    The directory to start the search from follows the regex pattern. The
+    following IDE command keywords can be used in place of the directory:
+
+    `:t[est/]`                    Search project test dir
+    `:s[rc/]`                     Search project src dir
+    `:p[roject/]`                 Search project dir
+    `:g[it/]`                     Search git repo
+
+    By default, if no directory is specifed then files are searched for in
+    the current project's src and test directories.
+
+    When no arguments are provided to grep, the prev results are re-displayed.
+    To re-run the previous find, use 'refresh grep'.
+
+    Examples: >
+     :grep foo                  Searches src/test files for 'foo'
+     :grep foo :project/        As above (or :grep foo :p)
+     :grep foo :src/            Searches project source files for 'foo'
+     :grep foo :test/           Searches project test files for 'foo'
+     :grep foo :git/            Searches git repo for foo'
+     :grep foo .                Searches current dir for files with 'foo'
+     :grep foo /bar             Searches /bar dir for files with 'foo'
+     :grep                      Re-display results of last grep
+     :refresh grep              Re-run last grep
+<
+:Help [subject]                                                   *:h* *:help*
+
+    Help overrides the default VIM help. It displays VIM help files inside of
+    the help view.
+
+    Examples: >
+     :help foo                  Open help view to subject foo
+>
+
+:Diff {file}                                                           *:diff*
+
+    Overrides VIM diff to make use of the diff view. Diffing is done in the
+    current GVIM window. To perform an external diff or a diff on files other
+    than the current file use `ediff`.
+
+    The diff command supports a number of command keywords:
+
+    `:saved`                      Diffs against changes since last save
+    `:staged`                     Diff cur file against staged file in git
+    `:head`                       Diff cur against same file in git HEAD rev
+    `:{git-rev}`                  Diff cur file against git rev (diff :v1.2)
+
+    If a command keyword is not used, then a file name (including path if
+    necessary) must be specified. If additional flexibility is needed, the
+    `:Find` command can be used to search for a list of files to diff.
+
+    If no arguments are passed then the previous diff is re-run.
+
+    Examples: >
+     :diff :saved               Diff changes since last save to file
+     :diff :staged              Diff changes in git index, not committed
+     :diff :head                Diff changes with file in HEAD revision
+     :diff :head^               Diff with file in previous commit
+     :diff :head~3              Diff with file in rev 3 commits ago
+     :diff :v1.1                Diff with file in revision tagged with v1.1
+     :diff /bar/foo             Diff changes with given file
+     :diff                      Re-run previous diff
+>
+
+:EDiff {file} [file]  (GVIM Only)                                     *:ediff*
+
+    Same as `:diff` but opens in an external gvim window. Unlike :diff,
+    :ediff allows two files to be specified. When only one filename is passed
+    then the diff is performed against the last saved version of the currently
+    open file. When more than one file is passed, the diff is perfomed against
+    the files passed.
+
+    Examples: >
+     :ediff :staged :head        Diff changes between staged and head in git
+     :ediff :head                Diff changes between last save and HEAD rev
+     :ediff foo bar              Diff changes between files foo and bar
+     :ediff                      Re-run previous ediff
+<
+
+:Git {cmd}                                                              *:git*
+
+    Wrapper around various git commands. Most of the commands rely on the
+    vim-fugative plugin to do the work, while IDE ensures that the output is
+    displayed in the git view. The following is a list of supported commands:
+
+    `log`                         Formatted output of 'git log %'
+    `log` `all`                     Formatted output of 'git log'
+    `status`                      Output of 'git status'
+    `commit`                      Open editor for 'git commit'
+    `read`                        Wrapper around fugitive Gread
+    `write`                       Wrapper around fugitive Gwrite
+    `rm`                          Wrapper around fugitive Gremove
+    `mv`                          Wrapper around fugitive Gmove
+    `blame`                       Wrapper around fugitive Gblame
+    `browse`                      Wrapper around fugitive Gbrowse
+
+    To open a git revision use the `:open` command. To diff with a git
+    revision use the `:diff` or `:ediff` commands.
+
+    Examples: >
+     :git log                   Output from 'git log %'
+     :git log all               Output from 'git log'
+     :git status                Output from 'git status'
+     :git commit                Open editor for 'git commit'
+     :git read {rev}            Read a rev without updating disk (:Gread)
+     :git write [path]          Stage file for comitting (:Gwrite)
+     :git rm                    Remove file from git and del buf (:Gremove)
+     :git mv [dest]             Move file in git to new dest (:Gmove)
+     :git blame                 Show git blame on current file
+>
+
+:Tmux [subcmd]  (TMUX Only)                                     *:tmu* *:tmux*
+
+    Provides support for various tmux related commands. The following is a
+    list of supported commands:
+
+    `config` {host} {session}     Configure current tmux host/session.
+    `show`                        Shows current tmux host/session info
+    `send`                        Sends shell command to configured session
+    `shell`                       Interactive shell using configured session
+                                (use ctrl-c to exit)
+
+    When `projux` is installed, the tmux settings will automatically be
+    configured based on the project settings.
+
+    When manually configuring the tmux session, only the session information
+    should be entered (not the window or pane). If no tmux information is
+    provided then the first session returned from 'tmux list-sessions' will be
+    used.  The show command will show the currently configured session (or the
+    default session if none configured).
+
+    The host/session information can also be specified globally in .vimrc
+    using the following varibles:
+
+    *g:ide_tmux_host*             Host running tmux server
+    *g:ide_tmux_session*          Name of tmux session
+
+    This is the preferred way to configure tmux host/session information.
+
+    By default, IDE sends shell commands to a window called 'shell' and
+    vim operations (e.g. `:eopen` commands) to a window called 'vim_2'. These
+    windows can customized in .vimrc using the following variables:
+
+    *g:ide_tmux_win_shell*        Name of window shell commands sent to
+    *g:ide_tmux_win_vim*          Name of window vim commands sent to
+
+    TMUX panes are not used directly, but there is nothing stopping someone
+    from using panes in place of the window names (e.g. mywin.mypane).
+
+    NOTE: When configuring TMUX to work with the `:eopen` command keep in mind
+      that you will want two TMUX windows running in separate SSH sessions.
+      A typical setup is to create a session 'foo' with windows 'vim',
+      'vim_2', 'shell', etc. Then, when attached to the 'vim' window, send
+      commands to the 'vim_2' window (or vice versa). You will likley want to
+      make use of grouped sessions in order to connect to different windows.
+
+
+    Examples: >
+     :tmux config test foo      Set current tmux session to 'foo' on 'test'
+     :tmux show                 Show current tmux settings
+     :tmux send hello           Sends "hello" to current tmux session
+     :tmux shell                Starts shell session with current tmux session
+
+
+:Win {win}  (TMUX Only)                                                 *:win*
+
+    Changes TMUX windows for window associated with the current VIM session.
+    This is a convenience allowing switching from the current tmux window
+    running VIM to another tmux window without having to exit VIM.  Rentering
+    the window will bring you right back to the current session in VIM. With
+    no arguments the current window is printed.
+
+    NOTE: This is the TMUX window associated with the current VIM session NOT
+      the external tmux session configured as per `:tmux`.
+
+    Examples: >
+     :win repl                   Change to 'repl' window (then run 'gt', etc)
+     :win                        Display current window
+
+
+:Ewin {win}  (TMUX Only)                                               *:ewin*
+
+    Changes TMUX windows for external session. This works similar to `:win`
+    only the window associated with the configured TMUX session is changed
+    (see `:tmux`)
+
+    Examples: >
+     :ewin bash                  Change to 'bash' window
+     :ewin vim                   Change to 'vim' window
+     :ewin                       Display current external window
+
+
+:Save [target]                                                         *:save*
+
+    Saves the named target. Currently the following targets are supported:
+
+    `:session` {name}             Saves vim-session session
+
+    If a session name is not provided then the current 'projux' project name
+    is used.  If a projux is not configured, then 'default' is used.
+
+
+PROJECT COMMANDS                                        *ide-project-commands*
+
+:Project [subcmd]                                           *:proj* *:project*
+
+    Invokes project management commands. The options supported are up to the
+    implementation chosen in the filetype specific settings.  However, both
+    projux and eclim support at least the following commands:
+
+    <empty>                     Display current project
+    [name]                      Set current project to 'name'
+    `ls`                          List all known projects
+    `settings`                    Display current project settings
+
+    Examples: >
+     :project                   Display current project
+     :project foo               Switch to project foo
+     :project ls                Display list of projects
+     :project settings          Show current project settings
+<
+
+:Docs [tags]                                                    *:doc* *:docs*
+
+    Displays project source code documentation. Documentation is looked up
+    based on tags such as class name, function name, etc. If no tags are given
+    then the current word under the cursor is used.  The actual documentation
+    provided is filetype specific and is provided by the following plugins
+    when installed: vim-pyref, vim-scaladoc, eclim.
+
+    Examples: >
+    vim-pyref
+     :docs set                  Open browser to python set definition
+     :docs dict                 Open browser to python dict definition
+
+    vim-scaladoc
+     :docs list                 Open browser to scala List class
+     :docs mutable map          Open browser to scala mutable.Map class
+
+    eclim
+     :docs String               Eclim :JavaDocSearch String
+     :docs HashMap              Eclim :JavaDocSearch HashMap
+>
+>
+:Search [flags]                                               *:sea* *:search*
+
+    Search for patterns within source files in a code base. The options
+    supported are up to the implementation chosen in the filetype specific
+    settings. Support for both projux and eclim is provided.
+
+
+:Format [target]                                              *:for* *:format*
+
+    Invokes project format command. The targets supported are up to the
+    implementation chosen in the filetype specific settings. Support is
+    provided for both projux and eclim using at least the following targets:
+
+    <empty>                     Format default targets
+    `:buffer`                     Format current buffer
+    `:file` or `%`                  Format current file
+    `.`                           Format current dir
+    `:project/`                   Format all files in project
+
+    Examples: >
+     :format                    Format default target
+     :format :b                 Format current buffer
+     :format :f                 Format current file
+     :format .                  Format current dir
+     :format :p                 Format current project
+<
+
+:Lint [target]                                                  *:lin* *:lint*
+
+    Invokes project lint command. The options supported are up to the
+    implementation chosen in the filetype specific settings. Support is
+    provided from projux, eclim, and pmd for at least the following targets:
+
+    <empty>                     Lint default targets
+    `:buffer`                     Lint current buffer
+    :`file` or `%`                  Lint current file
+    `.`                           Lint current dir
+    `:project/`                   Lint all files in project
+
+    Examples: >
+     :lint                      Lint default target
+     :lint :b                   Lint current buffer
+     :lint :f                   Lint current file
+     :lint .                    Lint current dir
+     :lint :p                   Lint current project
+
+
+:Build [target]                                                *:bui* *:build*
+
+    Invokes project build command. The options supported are up to the
+    implementation chosen in the filetype specific settings. Support is
+    provided from projux and eclim for at least the following targets:
+
+    <empty>                     Build default targets
+    :`file` or `%`                  Build current file
+    `.`                           Build current dir
+    `:project/`                   Build all files in project
+
+    Examples: >
+     :build                     Build default target
+     :build :f                  Build current file
+     :build .                   Build current dir
+     :build :p                  Build current project
+
+
+:Test [target]                                                   *:te* *:test*
+
+    Invokes project test command. The options supported are up to the
+    implementation chosen in the filetype specific settings. Support is
+    provided from projux and eclim for at least the following targets:
+
+    <empty>                     Test default targets
+    :`file` or `%`                  Test current file
+    `.`                           Test current dir
+    `:project/`                   Test all targets in project
+
+    Examples: >
+     :test                      Test default targets
+     :test :f                   Test current file
+     :test .                    Test current dir
+     :test :p                   Test current project
+     :test FooTest              Test FooTest test case
+
+
+:Coverage [target]                                          *:cov* *:coverage*
+
+    Invokes project test coverage command. The options supported are up to
+    the implementation chosen in the filetype specific settings. Support is
+    provided from projux for the following targets:
+
+    <empty>                     Test coverage of default targets
+    :`file` or `%`                  Test coverage of current file
+    `.`                           Test coverage of current dir
+    `:project/`                   Test coverage of all targets in project
+
+    Examples: >
+     :coverage                  Test coverage of default targets
+     :coverage :f               Test coverage of current file
+     :coverage .                Test coverage of current dir
+     :coverage :p               Test coverage of current project
+>
+
+:Run [args]                                                             *:run*
+
+    Runs program associated with project. The options supported are up to the
+    project implementation chosen in the filetype specific settings.
+    This command is currently supported by projux.
+
+    Examples: >
+     :run                       Run program
+
+
+:Errors [target]                                                     *:errors*
+
+    Loads errors from previous :build, :lint, etc. The options supported are
+    up to the project implementation chosen in the filetype specific settings.
+    This command is currently supported by projux.
+
+    Examples: >
+     :errors :build             Loads last :build errors
+     :errors :lint              Loads last :lint errors
+
+    NOTE: If vim was started witht he projux `pvim` function then the errors
+      will be loaded automatically.
+
+
+SPECIALIZED PROJECT COMMANDS                *ide-specialized-project-commands*
+
+:Sanity                                                              *:sanity*
+
+    Invokes project sanity command. This command is intended to be used to
+    run a series of checks before commiting code. A default implementation
+    is available using projux.
+>
+:Fix [options]                                                          *:fix*
+
+    Invokes project fix command. This command is intended to used to provide
+    hints for (or automatically fix) issues displayed in the quickfix or
+    location list. The options supported are up to the implementation.
+>
+
+:Gen [options]                                                    *:ge* *:gen*
+
+    Invokes project code generation command. This command is intended to used
+    for automatic code generation using snippets/templates, etc. The options
+    supported are up to the implementation.
+
+>
+:Mv [dest]                                                               *:mv*
+
+    Moves current file to different dir. If a full path dir is not provided
+    then the dir is searched for relative to the current project dir. If
+    multiple directories are found then a list to choose the desintation from
+    is displayed.  This command may be overridden by filetype specific
+    implementations (e.g. to account for java package renaming, etc).
+
+:Rename [old] [new]                                           *:ren* *:rename*
+
+    Perform project source code refactoring by renaming code specified by
+    the args. The args supported are up to the the filetype specific
+    implementations to define. If only one arg is provided, the current word
+    under cursor is used as [old].
+
+:Show [subcmd]                                                  *:sho* *:show*
+
+    Invokes project specific show commands. The subcmds supported are up to
+    the implementation.
+
+:Ant [options]                                                          *:ant*
+
+    Calls eclim implementation of :Ant command.
+
+:Mvn [options]                                                          *:mvn*
+
+    Calls eclim implementation of :Mvn command.
+
+
+HELPER COMMANDS                                          *ide-helper-commands*
+
+:Google {words}                                              *:goo*  *:google*
+
+    Searches for tag words in browser using google.com. The following keywords
+    can be used as shorthands for common tag words:
+
+    `:f[iletype]`                 Replaced by current filetype
+    `:s[tackoverflow]`            Replaced by 'stackoverflow'
+
+    Examples: >
+     :google foo                Opens browser to google 'foo'
+     :google foo :f             Opens browser to google 'foo <filetype>'
+     :google foo :s             Opens browser to google 'foo stackoverflow'
+<
+
+:Rm [target]                                                             *:rm*
+
+    Removes the named target. Currently the following targets are supported:
+
+    `session` {name}              Removes vim-session session
+
+    If a session name is not provided then the current 'projux' project name
+    is used.  If a projux is not configured, then 'default' is used.
+
+
+:Buffers                                                            *:buffers*
+
+    Overrides VIM :buffers command to list all (including hidden) currently
+    open VIM buffers in a temporary window. The temporary window contains key
+    mappings for: q (quit), x (delete), e/E (edit), t (open in tab),
+    s (open in split view), d/D (open in diff view)
+
+    Example: >
+     :buffers                   List open buffers
+
+>
+:History [name] [first] [last]                               *:his* *:history*
+
+    Overrides VIM history to add support for showing file change history
+    as detected by eclipse (via eclim).  History information is stored
+    separately by name. The following is a list of the VIM history names
+    as well as new file history name:
+
+    `a[all]`                      History of all
+
+    Examples: >
+     :history / 6,12            Entries 6-12 in search history
+>
+
+:Clear [target]                                                *:cle* *:clear*
+
+    Clears current info associated with given target:
+
+    `:e[rrors]`                   Clears location list and signs
+    `:q[uickfix]`                 Clears quickfix list
+    `:l[ocation]`                 Clears location list
+    `:s[ign]`                     Clears signs
+    `:h[istory]` `file`             Clears file history
+    `:f[ind]`                     Clears cached find results
+    `:g[rep]`                     Clears cached grep results
+    `:l[int]`                     Clears cached lint errors
+    `:b[uild]`                    Clears cached build errors
+    `:t[est]`                     Clears cached test errors
+    `:c[overage]`                 Clears cached coverage errors
+
+    Examples: >
+     :clear :errors             Clears location list and errors
+     :clear :quickfix           Clears quickfix list
+     :clear :loc                Clears location list
+     :clear :sign               Clears signs
+     :clear :history file       Clears eclipse history for file
+     :clear :grep               Clears last grep results
+     :clear :find               Clears last find results
+>
+>
+:Refresh [target]                                            *:ref* *:refresh*
+
+    Refreshes info associated with given target:
+
+    `:e[rrors]`                   Refreshes build/lint errors
+    `:q[uickfix]`                 Refreshes quickfix list
+    `:l[ocation]`                 Refreshes location list
+    `:d[iff]`                     Re-runs last diff
+    `:f[ind]`                     Re-runs last find
+    `:g[rep]`                     Re-runs last grep
+    `:l[int]`                     Reloads lint errors
+    `:b[uild]`                    Reloads build errors
+    `:t[est]`                     Reloads test errors
+    `:c[overage]`                 Reloads coverage errors
+
+
+    Examples: >
+     :refresh :errors           Refreshes errors
+     :refresh :quickfix         Refreshes quickfix list
+     :refresh :loc              Refreshes location list
+     :refresh :grep             Refreshes grep results
+     :refresh :find             Refreshes find results
+     :refresh :diff             Refreshes current diff
+>
+:Reset                                                                *:reset*
+
+    Resets gvim window to default location and dimensions. The location and
+    dimentions are specified using the following variables:
+
+    *g:ide_win_x*                 Window x pos
+    *g:ide_win_y*                 Window y pos
+    *g:ide_win_width*             Window width
+    *g:ide_win_height*            Window height
+
+    Example: >
+     :reset                     Move window/resize to current settings
+
+
+:Restart                                                            *:restart*
+
+    Restarts VIM while saving the current session before restarting.
+
+
+:Mru                                                                    *:mru*
+
+    Wrapper around MRU plugin.
+
+
+:Fuz {pat}                                                              *:fuz*
+
+    Wrapper arround FuzzyFinder.
+
+
+:Plugin [subcmd] [name]                                              *:plugin*
+
+    Invokes VIM plugin related utilities. VIM plugins are searched for within
+    the VIM runtime path. A special directory called 'disabled' is created
+    under the .vim home directory for storing plugins that have been
+    temporarly disabled.  It is recommended to manage the runtime path using
+    'vim-pathogen' or a similar plugin. The keyword 'all' can be used to
+    run a subcmd on all the plugins. The following subcmds are supported:
+
+    `l[s]`                        List installed (incl disabled) plugins
+    `u[pdate]` [name]             Update named plugin (must support GIT)
+    `e[nable]` [name]             Enable a disabled plugin
+    `d[isable]` [name]            Disable a plugin (move to .vim/disabled)
+    `i[nstall]` [url] | `all`       Installs a plugin via GIT url
+
+    Examples: >
+     :plugin ls                 List installed (incl disabled) plugins
+     :plugin update foo         Update the foo plugin to latest via GIT
+     :plugin update all         Update the all plugins to latest via GIT
+     :plugin enable foo         Enables the foo plugin
+     :plugin disable foo        Diable foo plugin
+     :plugin install git://...  Install plugin referenced by GIT url
+     :plugin install all        Install all plugins used by IDE
+<
+
+:Attach [target] [flags]  (OSX Only)                           *:at* *:attach*
+
+    Attaches external program to GVIM window. This feature is currently only
+    supported for MacVim. Attaching of an external window moves the window
+    next to the GVIM and resizes it. The location and dimensions used are
+    determined by the targets configured view settings. Without specifying any
+    additional flags, the current (if known) external window is used. If the
+    'any' flag is used then the plugin will get a handle to the last external
+    window selected by the user. The IDE plugin then holds onto the handle
+    to that external window for subsequent operations on the target view. The
+    following targets are supported:
+
+    `t[erminal]`                  External terminal view
+    `b[rowser]`                   External browser view
+
+    Examples: >
+     :attach terminal           Move external Terminal app next to gvim
+     :attach terminal any       As above, but use last selected Terminal
+     :attach browser            Move external Chrome app next to gvim
+     :attach browser any        As above, but use last selected Chrome win
+
+
+:Detach [target]  (OSX Only)                                 *:det* *:dettach*
+
+    Detaches external program from GVIM. This feature is currently only
+    supported on MacVim. Detaching does not move or resize the external
+    window, it only clears the handle that the plugin was holding on to.
+    The following targets are supported:
+
+    `t[erminal]`                  External terminal view
+    `b[rowser]`                   External browser view
+
+    Examples: >
+     :detach terminal           Remove Terminal app association with GVIM
+     :detach browser            Remove Chrome app association with GVIM
+>
+
+CUSTOMIZING                                                  *ide-customizing*
+
+The IDE plugin is designed to support customizations through a set of
+overrideable function implementations. These functions are global definitions
+with names of the form 'g:IdeXxx'. They can be overridden in either a .vimrc
+file, ftdetect plugin, or after plugin. Each function has a default
+implementation provided with the name 'g:IdeDefaultXxx'. The default can be
+used to fallback to the implementation when a function is only partially
+overridden. The following is a list of customization functions:
+
+    *g:IdeProjectDir(cur)*              default: *g:IdeDefaultProjectDir(cur)*
+
+      Used by various utilities that require the current project directory.
+      For java/scala, the default implementation searches for the project
+      directory based on the existence of a 'src' or 'test' directory in
+      the path of the currently open file. For projux, the *$PROJECT_DIR*
+      environment variable is used. If not found, the *g:ide_workspace*
+      variable is used to find the parent directory for the project in the
+      current files path. If this variable is not configured then directories
+      called 'workspace', 'work', or 'source' are searched for.
+
+    *g:IdeSrcDirs(cur)*                    default: *g:IdeDefaultSrcDirs(cur)*
+
+      Used by various utilities that require a list of directories containing
+      source files. For java/scala, the default implementation searches for
+      the existence of a 'src' directory under the project directory. For
+      projux, the *$PROJECT_SRC_DIR* environment variable is used. Otherwise
+      the directory of the currently open file is used.
+
+    *g:IdeTestDirs(cur)*                  default: *g:IdeDefaultTestDirs(cur)*
+
+      Used by various utilities that require a list of directories containing
+      test files. For java/scala, the default implementation searches for
+      the existence of a 'test' directory under the project directory. For
+      projux, the *$PROJECT_TEST_DIR* environment variable is used. Otherwise
+      the directory of the currently open file is used.
+
+    *g:IdeCompanion(cur,...)*        default: *g:IdeDefaultCompanion(cur,...)*
+
+      Used by 'open' and other commands to find the file or files that are
+      companions to the current file. A companion file can be either an
+      'alternate' for a file (e.g. .h vs .c, etc) or a 'test' file associated
+      with a source file or vice versa (e.g. 'Foo.java' vs 'FooTest.java',
+      etc). The second parameter to the call (e.g. a:1) will be the keyword
+      of the companion requested (':test', ':src', ':c', ':h', ...). This
+      function is typically overridden by a filetype specific ftdetect plugin.
+      IDE provides some reasonable defaults for java/scala, c, python, etc.
+
+    *g:IdeGetUrl(...)*                      default: *g:IdeDefaultGetUrl(...)*
+
+      Override to return the URLs used for reviews, bugs, and reports. The
+      supported options are up to the implementation. See `:Open` for the
+      default options supported.
+
+    *g:IdeProject(...)*                    default: *g:IdeDefaultProject(...)*
+
+      Called with 'project ...' cmd to perform project related operations.
+      The supported operations are up to the implementation. See `:Project`
+      for the default sub-commands supported.
+
+    *g:IdeDocs(tags)*                        default: *g:IdeDefaultDocs(tags)*
+
+      Called with 'docs ...' cmd to show source code documenation. The search
+      tags are passed (space separated) in the a:tags argument. By default, if
+      a supported documentation plugin (vim-pyref, vim-scaladoc, eclim) is
+      installed then those docs are used otherwise a browser is launched to
+      google for the tags.
+
+    *g:IdeDocsComplete(a,l,c)*      default: *g:IdeDefaultDocsComplete(a,l,c)*
+
+      VIM completion function used with 'docs ...' cmd.
+
+    *g:IdeSearch(pattern)*               defaut: *g:IdeDefaultSearch(pattern)*
+
+      Override to provide custom implementation of the 'search' cmd. The
+      default implementation support projux and eclim.
+
+    *g:IdeSearchContext(ctx)*        default: *g:IdeDefaultSearchContext(ctx)*
+
+      Invoked with the 'gs' key mapping to search the project for code based
+      on the context of the word under the cursor.
+
+    *g:IdeFormat(...)*                      default: *g:IdeDefaultFormat(...)*
+
+      Called with 'format ...' cmd to perform format related operations. The
+      supported flags are up to the implementation. However, one special
+      argument value 'selected' is used when format is called from visual mode
+      or a motion key. In this case, a:1 is set to 'selected' and the a:2 arg
+      contains the selection mode used ('v', 'V', 'char', 'line', or 'block').
+      The *ide#util#GetSelectedText(mode)* function can be used to obtain the
+      text. The a:2 can also be set to the special mode 'expr' to indicate
+      format was triggered by text selection via 'gq' using 'formatexpr'.
+      In this case v:lnum will be set to the first line in the buffer selected
+      and l:count will be set to the number of selected lines. See the VIM
+      docs for `formatexpr` for more info. See `:Format` for the default
+      options supported.
+
+    *g:IdeLint(...)*                          default: *g:IdeDefaultLint(...)*
+
+      Called with 'lint ...' cmd to perform lint related operations. The
+      supported flags are up to the implementation. See `:Lint` for the
+      default options supported.
+
+    *g:IdeBuild(...)*                        default: *g:IdeDefaultBuild(...)*
+
+      Called with 'build ...' cmd to perform build related operations. The
+      supported flags are up to the implementation. See `:Build` for the
+      default options supported.
+
+    *g:IdeTest(...)*                          default: *g:IdeDefaultTest(...)*
+
+      Called with 'test ...' cmd to perform test related operations. The
+      supported flags are up to the implementation. See `:Test` for the
+      default options supported.
+
+    *g:IdeCoverage(...)*                  default: *g:IdeDefaultCoverage(...)*
+
+      Called with 'coverage ...' cmd to perform test coverage related
+      operations. The supported flags are up to the implementation.
+      See `:Coverage` for the default options supported.
+
+    *g:IdeSanity(...)*                      default: *g:IdeDefaultSanity(...)*
+
+      Called with 'sanity ...' cmd to perform project sanity checks. The
+      supported flags are up to the implementation.  See `:Sanity` for the
+      default options supported.
+
+    *g:IdeErrors(...)*                      default: *g:IdeDefaultErrors(...)*
+
+      Called with 'errors' cmd to build a list of errors associated with
+      the `:Build`, `:Lint` , etc. The default implementation just calls
+      through to g:IdeGetErrors(...).
+
+    *g:IdeGetErrors(...)*                default: *g:IdeDefaultGetErrors(...)*
+
+      Called to get errors related to build, lint, etc. While IdeErrors is
+      for the VIM command, this can be used to query the project
+      implementation for the errors associated with the 'lint', 'build',
+      'test', etc commands. Errors should be returned as a dictionary in
+      the loclist format (see :help setqflist for more info).
+
+    *g:IdeRun(...)*                            default: *g:IdeDefaultRun(...)*
+
+      Called with 'run ...' cmd to run the program associated with the
+      current file's project. The supported flags are up to the
+      implementation. See `:Run` for the default options supported.
+
+    *g:IdeFix(...)*                            default: *g:IdeDefaultFix(...)*
+
+      Called with 'fix ...' cmd to perform auto fix related operations. The
+      supported flags are up to the implementation. See `:Fix` for the
+      default options supported.
+
+    *g:IdeGen(...)*                            default: *g:IdeDefaultGen(...)*
+
+      Called with 'gen ...' cmd to perform code gen related operations. The
+      supported flags are up to the implementation. See `:Gen` for the
+      default options supported.
+
+    *g:IdeMove(dest)*                         default:*g:IdeDefaultMove(dest)*
+
+      Called with 'mv {dest}' cmd to move current open file to given dest.
+      This function is meant to be overidden by filetype specific settings
+      that may require additional changes because of the move. For example,
+      the java implementation renames related packages.
+
+    *g:IdeRename(...)*                      default: *g:IdeDefaultRename(...)*
+
+      Called with 'rename ...' cmd to perform code refactoring. The supported
+      sub-commands are up to the implementation. See `:Rename` for the default
+      options supported.
+
+    *g:IdeShow(...)*                          default: *g:IdeDefaultShow(...)*
+
+      Called with 'show ...' cmd to perform show related operations. The
+      supported operations are up to the implementation. See `:Show`
+      for the default sub-commands supported.
+
+
+To override a view implementation, the following variables can be used:
+
+    *g:ide_<view>_view_buf_pat* (regex)
+      Regex for matching the views buffer name.
+      Example: g:ide_explorer_buf_pat = "NERD_tree_"
+
+    *g:ide_<view>_view_opener* (cmd/fn)
+      Command or function used to open view. Commands must start with ":".
+      Example: g:ide_outline_opener = "taglisttoo#taglist#Taglist"
+
+    *g:ide_<view>_view_closer* (cmd/fn)
+      Command or function used to close view. Commands must start with ":".
+      Example: g:ide_outline_closer = ":NERDTreeClose"
+
+
+THIRD-PARTY PLUGIN DEPENDENCIES                        *ide-thirdparty-plugns*
+
+The following is a list of third-party plugins used and the command and/or
+key mappings:
+
+projux
+    $ project                     :project
+    $ search                      :search
+    $ format                      :format
+    $ build                       :build
+    $ lint                        :lint
+    $ test                        :test
+    $ coverage                    :coverage
+    $ run                         :run
+    $ geterrors                   :errors {lint | build | test | coverage}
+    $ geturl                      :open {report| review | bug}
+    $ win                         :win
+
+vim-fugative
+    :Gstatus                      :git status
+    :Gcommit                      :git commit
+    :Gread                        :git read
+    :Gwrite                       :git write
+    :Gmove                        :git mv
+    :Gremove                      :git rm
+    :Gblame                       :git blame
+    :Gbrowse                      :git browse
+
+    NOTE: IDE has its own implementations for :Gedit, :Glog, and :Gdiff
+      via :open, :git log, and :diff/:ediff
+
+vim-pyref [Python only]
+    :PyDocs                       :docs
+
+vim-scaladoc [Scala only]
+    :ScalaDoc                     :docs
+
+taglist.vim/taglisttoo
+    :Tlist (TlistToo)             to
+
+nerdtree
+    :NERDTree                     te
+
+conque-term
+    :ConqueTerm bash              tt
+
+eclim
+  General
+    :Validate                     :build
+    :ProjectBuild                 :errors build
+    :ProjectList                  :project ls
+    :ProjectSettings              :project settings
+    :ProjectRefresh               :project refresh
+    :ProjectRefreshAll            :project refresh all
+    :ProjectCreate                :project create
+    :ProjectDelete                :project delete
+    :ProjectImport                :project import
+    :ProjectRename                :project rename
+    :ProjectMove                  :project move
+    :ProjectInfo                  :project info
+    :ProjectOpen                  :project open
+    :ProjectClose                 :project close
+    :ProjectNatures               :project natures
+    :ProjectNatureAdd             :project nature add
+    :ProjectNatureRemove          :project nature delete
+    :ProjectCD                    :project cd
+    :ProjectLCD                   :project lcd
+    :ProjectTree                  :open project
+    :ProjectProblems              :refresh quicklist
+    :ProjectTodo                  :search todo project
+    :Todo                         :search todo
+    :History                      :history file
+    :HistoryClear                 :clear history file
+    :PingEclim                    :plugin eclim status
+    :EclimSettings                :plugin eclim settings
+    :EclimDisable                 :plugin eclim stop
+    :EclimEnable                  :plugin eclim start
+    :EclimShutdown                :plugin eclim kill
+  Scala
+    :ScalaSearch                  gs
+  Java
+    :Javadoc                      :build :docs
+    :JavaMove com.foo             :mv com/foo
+    :JavaSearch                   :search -p ...
+    :JavaClasspath                :project classpath
+    :JavaHierarchy                :show hierarchy
+    :Jps                          :show process
+    :JavaDocSearch                :docs
+    :JavaCheckstyle               :lint :checkstyle
+    :JUnit                        :test
+    :%JavaFormat                  :format
+    :JavaImportOrganize           :format :imports
+    :JavaCorrect                  :fix
+    :JavaImport                   :gen import
+    :JavaImpl                     :gen impl
+    :JUnitImpl                    :gen test
+    :JavaConstructor              :gen constructor
+    :JavaGet                      :gen getter
+    :JavaSet                      :gen setter
+    :JavaGetSet                   :gen property
+    :JavaDelegate                 :gen delegate
+    :JavaRename                   :rename
+    :JavaSearchContext            gs
+    :JavaImport                   <leader>i
+    :JavaFormat                   gq
+  C/C++
+    :CProjectConfig               :project config
+    :CSearch                      :search -p ...
+    :CCallHierarchy               :show hierarchy
+    :CSearchContext               gs
+  Python
+    :PyLint                       :lint
+    :PythonSearchContext          gs
+  Ruby
+    :RubySearch                   :search -p ...
+    :RubySearchContext            gs
+  Php
+    :PhpSearch                    :search -p ...
+    :PhpSearchContext             gs
+  Xml
+    :XmlFormat                    :format
+
+python-mode
+    :PyLint                       :lint
+
+PMD
+    $pmd                          :lint :pmd
+
+
+LICENSE                                                          *ide-license*
+
+Copyright 2012 Mike Dreves
+
+All rights reserved. This program and the accompanying materials
+are made available under the terms of the Eclipse Public License v1.0
+which accompanies this distribution, and is available at:
+
+    http://opensource.org/licenses/eclipse-1.0.php
+
+By using this software in any fashion, you are agreeing to be bound
+by the terms of this license. You must not remove this notice, or any
+other, from this software. Unless required by applicable law or agreed
+to in writing, software distributed under the License is distributed
+on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied.
+
+vim:tw=78:ts=8:ft=help:norl:
