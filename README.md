@@ -10,17 +10,17 @@ plugins.
 
 To make the most of this plugin, the following should be installed:
 
-  - projux [https://github.com/mdreves/projux]
-  - syntastic [https://github.com/scrooloose/syntastic]
-  - vim-fugative [https://github.com/tpope/vim-fugitive]
-  - vim-session [https://github.com/xolox/vim-session]
-  - taglist.vim [https://github.com/vim-scripts/taglist.vim]
-  - nerdtree [https://github.com/scrooloose/nerdtree]
+  - [projux](https://github.com/mdreves/projux)
+  - [syntastic](https://github.com/scrooloose/syntastic)
+  - [vim-fugative](https://github.com/tpope/vim-fugitive)
+  - [vim-session](https://github.com/xolox/vim-session)
+  - [taglist.vim](https://github.com/vim-scripts/taglist.vim)
+  - [nerdtree](https://github.com/scrooloose/nerdtree)
 
 Optional, but highly recommended plugins:
-  - vim-pyref (Python) [https://github.com/xolox/vim-pyref]
-  - vim-scaladoc (Scala) [https://github.com/mdreves/vim-scaladoc]
-  - eclim [http://eclim.org/]
+  - [vim-pyref (Python)](https://github.com/xolox/vim-pyref)
+  - [vim-scaladoc (Scala)](https://github.com/mdreves/vim-scaladoc)
+  - [eclim](http://eclim.org/)
 
 # Installation
 
@@ -40,50 +40,62 @@ Once help tags have been generated, you can view the manual with
 Here's a quick summary of just some of the avaiable features:
 
   - Buffers:
+
     tj                          Toggle buffer list display
     :open :test                 Open test file (from source)
     :open :src                  Open source file (from test)
     :open :h                    Open c header file
 
   - Diffing:
+
     :diff :saved                Diff current buffer with last save
     :diff :head                 Diff current file with GIT head
     :diff :staged               Diff current file with GIT staged data
 
   - Docs:
+
     :doc <tag>                  Launch browser to source code reference
 
   - Formatting:
+
     <leader>f                   Format (current buffer)
     gq                          Format selected text
 
   - Building:
+
     <leader>b                   Build in second TMUX window
 
   - Linting:
+
     <leader>l                   Lint in second TMUX window
 
   - Errors:
+
     <leader>e                   Errors (syntastic) for previous lint/build
     tl                          Toggle location (errors, grep) list display
 
     NOTE: If running vim from projux's pvim, build/lint errors are auto-loaded
 
   - Testing:
+
     <leader>t                   Run test for current file
 
   - Running:
+
     <leader>r                   Run program
 
   - Find/Grep:
+
     :Find <glob>                Find files in current project
     :Grep <pat>                 Find files with pattern in current project
 
   - Sessions:
+
     :save :session              Save current VIM session under project name
 
   - Tmux:
-    gt                          Send selected text to companion TMUX session
+
+    gt                          Send selected text to companion tmux session
 
 
 # License
