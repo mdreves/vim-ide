@@ -39,63 +39,64 @@ Once help tags have been generated, you can view the manual with
 
 Here's a quick summary of just some of the avaiable features:
 
-* Buffers:
+  - Buffers:
 
-    tj                          Toggle buffer list display
-    :open :test                 Open test file (from source)
-    :open :src                  Open source file (from test)
-    :open :h                    Open c header file
+        tj                      Toggle buffer list display
+        :open :test             Open test file (from source)
+        :open :src              Open source file (from test)
+        :open :h                Open c header file
 
-* Diffing:
+  - Diffing:
 
-    :diff :saved                Diff current buffer with last save
-    :diff :head                 Diff current file with GIT head
-    :diff :staged               Diff current file with GIT staged data
+        :diff :saved            Diff current buffer with last save
+        :diff :head             Diff current file with GIT head
+        :diff :staged           Diff current file with GIT staged data
 
-* Docs:
+  - Docs:
 
-    :doc <tag>                  Launch browser to source code reference
+        :doc <tag>              Launch browser to source code reference
 
-* Formatting:
+  - Formatting:
 
-    <leader>f                   Format (current buffer)
-    gq                          Format selected text
+        <leader>f               Format (current buffer)
+        gq                      Format selected text
 
-* Building:
+  - Building:
 
-    <leader>b                   Build in second TMUX window
+        <leader>b               Build in second TMUX window
 
-* Linting:
+  - Linting:
 
-    <leader>l                   Lint in second TMUX window
+        <leader>l               Lint in second TMUX window
 
-* Errors:
+  - Errors:
 
-    <leader>e                   Errors (syntastic) for previous lint/build
-    tl                          Toggle location (errors, grep) list display
+        <leader>e               Errors (syntastic) for previous lint/build
+        tl                      Toggle location (errors, grep) list display
 
-    NOTE: If running vim from projux's pvim, build/lint errors are auto-loaded
+        NOTE: If running vim from projux's pvim, build/lint errors are
+              auto-loaded
 
-* Testing:
+  - Testing:
 
-    <leader>t                   Run test for current file
+        <leader>t               Run test for current file
 
-* Running:
+  - Running:
 
-    <leader>r                   Run program
+        <leader>r               Run program
 
-* Find/Grep:
+  - Find/Grep:
 
-    :Find <glob>                Find files in current project
-    :Grep <pat>                 Find files with pattern in current project
+        :Find <glob>            Find files in current project
+        :Grep <pat>             Find files with pattern in current project
 
-* Sessions:
+  - Sessions:
 
-    :save :session              Save current VIM session under project name
+        :save :session          Save current VIM session under project name
 
-* TMUX:
+  - TMUX:
 
-    gt                          Send selected text to companion tmux session
+        gt                      Send selected text to second tmux window
 
 
 # License
