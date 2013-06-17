@@ -2209,7 +2209,7 @@ function! g:IdeDefaultErrors(...) abort " {{{
   " Syntastic handles errors on its own
   if ide#util#NameRangeMatch(args[0], ":s", ":syntastic")
     :SyntasticCheck
-    let loclist = g:SyntasticLoclist.Current()
+    let loclist = g:SyntasticLoclist.current()
     call setloclist(0, loclist.filteredRaw())
     return
   endif
