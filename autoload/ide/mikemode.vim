@@ -129,7 +129,7 @@ function! ide#mikemode#Vars() abort " {{{
     \     'colorscheme': 1,
     \     'local_settings':
       \       "number noexpandtab shiftwidth=2 tabstop=2 softtabstop=2 " .
-      \       "linebreak wrapmargin=0 wrap " .
+      \       "textwidth=90 linebreak wrapmargin=0 nowrap " .
       \       "formatexpr=g:IdeFormatSelected('expr')",
     \     'margin': 1,
     \  },
@@ -158,8 +158,16 @@ function! ide#mikemode#Vars() abort " {{{
 
   augroup ide_cpp_colors_augroup
     autocmd! BufWinEnter *.c,*.cc,*.h,*.cpp
-    autocmd BufWinEnter *.c,*.cc,*.h,*.cpp call <SID>CustomCHighlights()
+    autocmd BufWinEnter *.c,*.cc,*.h,*.cpp call <SID>CustomC()
   augroup END
+
+  if exists("g:ide_always_display_gutter") && g:ide_always_display_gutter == 1
+    augroup ide_gutter
+        au BufWinEnter * sign define alwaysdisplay
+        au BufWinEnter * exe
+           \ "sign place 1337 line=1 name=alwaysdisplay buffer=" . bufnr('%')
+    augroup END
+  endif
 endfunction " }}}
 
 
@@ -184,8 +192,9 @@ function s:CustomQuit() abort " {{{
 endfunction " }}}
 
 
-" Highlight C++ class and function names (not provided by default)
-function s:CustomCHighlights() abort " {{{
+" Custom C setup
+function s:CustomC() abort " {{{
+  " Highlight C++ class and function names (not provided by default)
   syn match    cCustomParen    "?=(" contains=cParen,cCppParen
   syn match    cCustomFunc     "\w\+\s*(\@=" contains=cCustomParen
   syn match    cCustomScope    "::"
@@ -194,6 +203,9 @@ function s:CustomCHighlights() abort " {{{
   hi def link cCustomScope Identifer
   hi def link cCustomFunc  Function
   hi def link cCustomClass Class
+
+  " Load YCM
+  call ide#util#InvokeLater(':call g:LoadYcm()')
 endfunction " }}}
 
 
@@ -215,7 +227,7 @@ let s:bundle = expand('<sfile>:h:h:h:h')
 " Delayed loading of YCM.
 "
 " NOTE Must have g:loaded_youcompleteme = 0 in .vimrc for this to work.
-function s:LoadYcm() abort " {{{
+function g:LoadYcm() abort " {{{
   if ! exists("g:loaded_youcompleteme") || ! g:loaded_youcompleteme
     unlet g:loaded_youcompleteme
     exec "source " . s:bundle . "/YouCompleteMe/plugin/youcompleteme.vim"
@@ -296,7 +308,7 @@ function! ide#mikemode#Mappings() abort " {{{
     inoremap <c-space> <c-x><c-u>
     inoremap <c-@> <c-space>
   else
-    noremap <silent> <leader>y :call <SID>LoadYcm()<cr>
+    noremap <silent> <leader>y :call g:LoadYcm()<cr>
   endif
 
 
