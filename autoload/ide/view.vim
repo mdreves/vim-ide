@@ -1078,7 +1078,7 @@ function! ide#view#WindowOpenedCb(buf_num) abort " {{{
   endif
 
 
-  if a:buf_num > 0
+  if a:buf_num > 1
     let s:last_win_opened = bufs[a:buf_num]
   else
     let s:last_win_opened = a:buf_num

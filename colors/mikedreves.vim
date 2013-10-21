@@ -103,10 +103,10 @@ if &background == "light" || &diff
     let s:colors.gutter_bg = s:colors.secondary_beige
     let s:colors.extended_gutter_bg = s:colors.primary_beige
   endif
-  let s:colors.status_bg = s:colors.status_grey
-  let s:colors.status_fg = s:colors.black
+  let s:colors.status_bg = ['#87afaf', '109']
+  let s:colors.status_fg = s:colors.white
   let s:colors.inactive_status_fg = s:colors.black
-  let s:colors.inactive_status_bg = s:colors.secondary_grey
+  let s:colors.inactive_status_bg = s:colors.gutter_grey
   let s:colors.fold_fg = s:colors.white
   let s:colors.fold_bg = s:colors.secondary_blue
   let s:colors.split_fg = s:colors.secondary_fg
@@ -175,7 +175,7 @@ if &background == "light" || &diff
 
 else
 
-  let s:colors.primary_black = ['#1e2426', '234']        " primary black
+  let s:colors.primary_black = ['#1e2426', '235']        " primary black
   let s:colors.secondary_black = ['#2c3032', '237']      " secondary black
   let s:colors.highlight_black = ['#2e3436', '233']      " black for highlights
   let s:colors.selection_black = ['#2e303b', '237']      " black for selections
@@ -183,9 +183,9 @@ else
   let s:colors.secondary_light_grey = ['#eeeeec', '254'] " secondary light grey
   let s:colors.primary_dark_grey = ['#555753', '236']    " primary dark grey
   let s:colors.secondary_dark_grey = ['#888a85', '102']  " secondary dark grey
-  let s:colors.comment_grey = ['#656763', '239']         " grey for comment
+  let s:colors.comment_grey = ['#656763', '243']         " grey for comment
   let s:colors.primary_red = ['#a14848', '124']          " primary red
-  let s:colors.primary_green = ['#8ae234', '46']         " primary green
+  let s:colors.primary_green = ['#8ae234', '82']         " primary green
   let s:colors.primary_blue = ['#729fcf', '69']          " primary blue
   let s:colors.primary_orange = ['#fcaf3e', '208']       " primary orange
   let s:colors.primary_yellow = ['#d1d435', '184']       " primary yellow
@@ -202,8 +202,8 @@ else
   let s:colors.gutter_fg = s:colors.selection_black
   let s:colors.gutter_bg = s:colors.black
   let s:colors.extended_gutter_bg = s:colors.primary_black
-  let s:colors.status_fg = s:colors.highlight_black
-  let s:colors.status_bg = s:colors.primary_light_grey
+  let s:colors.status_fg = s:colors.secondary_light_grey
+  let s:colors.status_bg = ['#4e4e4e', '239']
   let s:colors.inactive_status_fg = s:colors.highlight_black
   let s:colors.inactive_status_bg = s:colors.secondary_dark_grey
   let s:colors.fold_fg = ['#d3d7cf', '188']
