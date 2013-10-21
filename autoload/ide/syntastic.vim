@@ -17,7 +17,7 @@
 " @author Mike Dreves
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-let s:syntastic_notifiers = g:SyntasticNotifiers.new()
+let s:syntastic_notifiers = g:SyntasticNotifiers.Instance()
 
 " Syntastic Lint implementation
 function! ide#syntastic#Lint(...) abort " {{{
