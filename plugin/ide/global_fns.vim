@@ -2265,8 +2265,6 @@ function! g:IdeDefaultErrors(...) abort " {{{
   endif
 
   let s:last_errors = args
-
-  return ide#util#EchoError("Errors not implemented")
 endfunction " }}}
 
 
