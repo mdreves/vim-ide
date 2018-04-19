@@ -75,8 +75,7 @@ function! ide#mikemode#Vars() abort " {{{
     \     'colorscheme': -1,
     \     'local_settings':
       \       "expandtab shiftwidth=2 tabstop=2 softtabstop=2 " .
-      \       "textwidth=80 linebreak wrapmargin=0 wrap " .
-      \       "formatexpr=g:IdeFormatSelected('expr')",
+      \       "textwidth=80 linebreak wrapmargin=0 wrap",
     \     'margin': -1,
     \     'project': 'projux',
     \     'search': 'projux',
@@ -107,8 +106,7 @@ function! ide#mikemode#Vars() abort " {{{
     \     'colorscheme': 1,
     \     'local_settings':
       \       "number expandtab shiftwidth=2 tabstop=2 softtabstop=2 " .
-      \       "textwidth=90 linebreak wrapmargin=0 wrap " .
-      \       "formatexpr=g:IdeFormatSelected('expr')",
+      \       "textwidth=90 linebreak wrapmargin=0 wrap",
     \     'margin': 1,
     \     'project': 'eclim',
     \     'search': 'eclim',
@@ -129,8 +127,7 @@ function! ide#mikemode#Vars() abort " {{{
     \     'colorscheme': 1,
     \     'local_settings':
       \       "number noexpandtab shiftwidth=2 tabstop=2 softtabstop=2 " .
-      \       "textwidth=90 linebreak wrapmargin=0 nowrap " .
-      \       "formatexpr=g:IdeFormatSelected('expr')",
+      \       "textwidth=90 linebreak wrapmargin=0 nowrap",
     \     'margin': 1,
     \  },
   \}
@@ -141,8 +138,7 @@ function! ide#mikemode#Vars() abort " {{{
         \     'colorscheme': 1,
         \     'local_settings':
           \       "number expandtab shiftwidth=2 tabstop=2 softtabstop=2 " .
-          \       "textwidth=80 linebreak wrapmargin=0 wrap " .
-          \       "formatexpr=g:IdeFormatSelected('expr')",
+          \       "textwidth=80 linebreak wrapmargin=0 wrap",
         \     'margin': 1,
         \  }
     endif
@@ -205,7 +201,7 @@ function s:CustomC() abort " {{{
   hi def link cCustomClass Class
 
   " Load YCM
-  call ide#util#InvokeLater(':call g:LoadYcm()')
+  "call ide#util#InvokeLater(':call g:LoadYcm()')
 endfunction " }}}
 
 
@@ -227,13 +223,13 @@ let s:bundle = expand('<sfile>:h:h:h:h')
 " Delayed loading of YCM.
 "
 " NOTE Must have g:loaded_youcompleteme = 0 in .vimrc for this to work.
-function g:LoadYcm() abort " {{{
-  if ! exists("g:loaded_youcompleteme") || ! g:loaded_youcompleteme
-    unlet g:loaded_youcompleteme
-    exec "source " . s:bundle . "/YouCompleteMe/plugin/youcompleteme.vim"
-    call youcompleteme#Enable()
-  endif
-endfunction " }}}
+" function g:LoadYcm() abort " {{{
+"   if ! exists("g:loaded_youcompleteme") || ! g:loaded_youcompleteme
+"     unlet g:loaded_youcompleteme
+"     exec "source " . s:bundle . "/YouCompleteMe/plugin/youcompleteme.vim"
+"     call youcompleteme#Enable()
+"   endif
+" endfunction " }}}
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

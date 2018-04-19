@@ -139,16 +139,16 @@ function! ide#projux#Project(...) abort " {{{
   endif
 
   if a:0 == 0
-    return ide#util#EchoShellCmd("project")
+    return ide#util#EchoShellCmd("projux")
   elseif a:1 ==# "ls"
     return ide#projux#ChooseProject(
        \ "projects", g:ide_list_view_pos, g:ide_list_view_size)
   elseif a:1 ==# "settings"
-    return ide#util#EchoShellCmd("project settings")
+    return ide#util#EchoShellCmd("projux settings")
   elseif a:0 > 1 && a:2 ==# "settings"
-    return ide#util#EchoShellCmd("project " . a:1 . " settings")
+    return ide#util#EchoShellCmd("projux " . a:1 . " settings")
   else
-    return ide#util#InvokeShellCmd("project " . a:1)
+    return ide#util#InvokeShellCmd("projux " . a:1)
   endif
 endfunction " }}}
 
@@ -163,7 +163,7 @@ function! ide#projux#GetUrl(...) abort " {{{
     return ide#util#EchoError("Projux not installed")
   endif
 
-  let out = ide#util#InvokeShellCmd("geturl " . join(a:000, " "))
+  let out = ide#util#InvokeShellCmd("projux url " . join(a:000, " "))
   if len(out) > 0 && out[0] != "NOT PROJECT HOST!"
     return out[0]
   else
@@ -183,7 +183,7 @@ function! ide#projux#Search(...) " {{{
   endif
 
   return ide#util#InvokeShellCmd(
-    \ "search " . join(ide#util#ExpandKeywords(a:000, 0, ""), " "))
+    \ "projux search " . join(ide#util#ExpandKeywords(a:000, 0, ""), " "))
 endfunction " }}}
 
 
@@ -211,7 +211,7 @@ function! ide#projux#Format(...) abort " {{{
     return ide#util#EchoError("Projux not installed")
   endif
 
-  let format_cmd = "FILE_TYPE=" . &filetype . " format"
+  let format_cmd = "FILE_TYPE=" . &filetype . " projux format"
   if a:0 > 0 && ide#util#NameRangeMatch(a:1, ":s", ":selected")
     " In this case formatexpr was used. The v:lnum and v:count are set
     " by VIM to the start of the selected line and number of lines
@@ -245,7 +245,7 @@ function! ide#projux#Format(...) abort " {{{
   call g:IdeWin("external", g:ide_tmux_win_build)
   return ide#tmux#Send(
     \ "pushd " . base_dir . " &> /dev/null && " .
-    \ "format " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
+    \ "projux format " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
     \ "; popd &> /dev/null\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_build)
 endfunction " }}}
@@ -269,7 +269,7 @@ function! ide#projux#Lint(...) " {{{
     "   provide a hint to the linter on how to lint the file
     let text = join(getline(1, line("$")), "\n") . "\n"
     let lint_cmd = "FILE_TYPE=" . &filetype .
-          \ " FILE_NAME=" . expand("%:p") . " lint"
+          \ " FILE_NAME=" . expand("%:p") . " projux lint"
     let results = system(lint_cmd, text)
     if v:shell_error == 0 && results != "\n"
       let errlist = ide#util#MakeLocationList(split(results, "\n"))
@@ -293,7 +293,7 @@ function! ide#projux#Lint(...) " {{{
   call g:IdeWin("external", g:ide_tmux_win_build)
   call ide#tmux#Send(
     \ "pushd " . base_dir . " &> /dev/null && " .
-    \ "lint " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
+    \ "projux lint " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
     \ async_response .
     \ "; popd &> /dev/null\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_build)
@@ -322,7 +322,7 @@ function! ide#projux#Build(...) " {{{
   call g:IdeWin("external", g:ide_tmux_win_build)
   call ide#tmux#Send(
     \ "pushd " . base_dir . " &> /dev/null && " .
-    \ "build " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
+    \ "projux build " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
     \ async_response .
     \ "; popd &> /dev/null\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_build)
@@ -351,7 +351,7 @@ function! ide#projux#Test(...) " {{{
   call g:IdeWin("external", g:ide_tmux_win_build)
   call ide#tmux#Send(
     \ "pushd " . base_dir . " &> /dev/null && " .
-    \ "test " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
+    \ "projux test " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
     \ async_response .
     \ "; popd &> /dev/null\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_build)
@@ -380,7 +380,8 @@ function! ide#projux#Coverage(...) " {{{
   call g:IdeWin("external", g:ide_tmux_win_build)
   call ide#tmux#Send(
     \ "pushd " . base_dir . " &> /dev/null && " .
-    \ "coverage " . join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
+    \ "projux coverage " .
+    \ join(ide#util#RemoveCommonPath(base_dir, a:000), " ") .
     \ async_response .
     \ "; popd &> /dev/null\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_build)
@@ -402,7 +403,8 @@ function! ide#projux#Sanity(...) abort " {{{
   call g:IdeWin("external", g:ide_tmux_win_build)
   call ide#tmux#Send(
     \ "pushd " . base_dir . " &> /dev/null && " .
-    \ "sanity " . join(ide#util#RemoveCommonPath(base_dir, a:000, 1), " ") .
+    \ "projux sanity " .
+    \ join(ide#util#RemoveCommonPath(base_dir, a:000, 1), " ") .
     \ "; popd &> /dev/null\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_build)
 endfunction " }}}
@@ -420,10 +422,10 @@ function! ide#projux#GetErrors(...)
 
   if a:0 > 0 && (a:1 == ':build' || a:1 == ':lint' ||
       \ a:1 == ':test' || a:1 == ':coverage')
-    let results = ide#util#InvokeShellCmd("geterrors " . a:1)
+    let results = ide#util#InvokeShellCmd("projux errors " . a:1)
   else
     let results = ide#util#InvokeShellCmd(
-      \ "geterrors " . join(ide#util#ExpandKeywords(a:000, 1, ""), " "))
+      \ "projux errors " . join(ide#util#ExpandKeywords(a:000, 1, ""), " "))
   endif
 
   return ide#util#MakeLocationList(results)
@@ -442,7 +444,7 @@ function! ide#projux#Run(...) " {{{
 
   call g:IdeWin("external", g:ide_tmux_win_shell)
   call ide#tmux#Send(
-    \ "run " . join(ide#util#ExpandKeywords(a:000, 1, ""), " ") . "\n",
+    \ "projux run " . join(ide#util#ExpandKeywords(a:000, 1, ""), " ") . "\n",
     \ ide#tmux#GetSession() . ":" . g:ide_tmux_win_shell)
 endfunction " }}}
 
@@ -456,7 +458,7 @@ function! ide#projux#ExternalWindow(...)
     return ide#util#EchoError("Projux not installed")
   endif
 
-  let out = ide#util#InvokeShellCmd("win " . join(a:000, " "))
+  let out = ide#util#InvokeShellCmd("projux win " . join(a:000, " "))
   if len(out) > 0
     return out[0]
   else
@@ -478,7 +480,7 @@ function! ide#projux#ChooseProject(buffer_name, win_pos, win_size) abort " {{{
   let projects = []
   let cur = 1
   let idx = 1
-  for p in sort(ide#util#InvokeShellCmd("project ls"))
+  for p in sort(ide#util#InvokeShellCmd("projux ls"))
     if s:project_name == p
       let cur = idx
       call add(projects, ">" . p)
@@ -499,5 +501,5 @@ function! ide#projux#ChooseProject(buffer_name, win_pos, win_size) abort " {{{
   " map enter to call funcref
   nnoremap <silent> <buffer> <cr>
     \ call ide#util#CloseWindow(bufname('')) \|
-    \ call ide#util#InvokeShellCmd("project " . getline('.'))<CR>
+    \ call ide#util#InvokeShellCmd("projux " . getline('.'))<CR>
 endfunction " }}}
